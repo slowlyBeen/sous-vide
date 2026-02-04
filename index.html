@@ -70,25 +70,66 @@
         .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
     </style>
 
-    <script>
-        // Local Storage를 이용한 레시피 관리 시스템
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+        import { getFirestore, collection, query, where, onSnapshot, addDoc, deleteDoc, doc, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyDE8_b7MuDg7XActzX1LSqRKGkfsPo4ltc",
+            authDomain: "sous-vide-b6f2f.firebaseapp.com",
+            projectId: "sous-vide-b6f2f",
+            storageBucket: "sous-vide-b6f2f.firebasestorage.app",
+            messagingSenderId: "404358665931",
+            appId: "1:404358665931:web:72936c9f7887ea7222ad4e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
         let allRecipes = [];
         let currentPage = 1;
         const itemsPerPage = 6;
+        let currentUser = null;
+        let unsubscribe = null;
 
-        // 초기 데이터 로드
-        window.onload = () => {
-            const savedData = localStorage.getItem('sous_vide_recipes');
-            if (savedData) {
-                allRecipes = JSON.parse(savedData);
+        // 익명 로그인 및 데이터 로드
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                console.log('익명 로그인 성공:', user.uid);
+                loadRecipes();
+            } else {
+                signInAnonymously(auth).catch(err => {
+                    console.error('익명 로그인 실패:', err);
+                    alert('로그인 중 오류가 발생했습니다.');
+                });
             }
-            renderUI();
-        };
+        });
 
-        const saveToLocal = () => {
-            localStorage.setItem('sous_vide_recipes', JSON.stringify(allRecipes));
-            renderUI();
-        };
+        // Firestore에서 실시간 레시피 로드
+        function loadRecipes() {
+            if (unsubscribe) unsubscribe();
+
+            const q = query(
+                collection(db, "recipes"),
+                where("userId", "==", currentUser.uid),
+                orderBy("createdAt", "desc")
+            );
+
+            unsubscribe = onSnapshot(q, (snapshot) => {
+                allRecipes = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                renderUI();
+            }, (error) => {
+                console.error('데이터 로드 오류:', error);
+            });
+        }
 
         const renderUI = () => {
             const grid = document.getElementById('recipe-grid');
@@ -97,34 +138,34 @@
 
             if (allRecipes.length === 0) {
                 grid.innerHTML = `
-                    <div class="col-span-full py-32 text-center">
-                        <div class="inline-flex items-center justify-center w-24 h-24 bg-orange-50 rounded-full mb-6">
-                            <span class="text-5xl">🍳</span>
-                        </div>
-                        <h3 class="text-2xl font-bold text-slate-800">보관함이 비어있습니다</h3>
-                        <p class="text-slate-500 mt-2 max-w-xs mx-auto">최고의 수비드 레시피를 추가해 나만의 요리책을 만들어보세요.</p>
-                        <button onclick="openModal('add-modal')" class="mt-8 px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg">첫 레시피 추가</button>
-                    </div>
-                `;
+        <div class="col-span-full py-32 text-center">
+          <div class="inline-flex items-center justify-center w-24 h-24 bg-orange-50 rounded-full mb-6">
+            <span class="text-5xl">🍳</span>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-800">보관함이 비어있습니다</h3>
+          <p class="text-slate-500 mt-2 max-w-xs mx-auto">최고의 수비드 레시피를 추가해 나만의 요리책을 만들어보세요.</p>
+          <button onclick="openModal('add-modal')" class="mt-8 px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg">첫 레시피 추가</button>
+        </div>
+      `;
             } else {
                 grid.innerHTML = paginated.map((recipe, idx) => `
-                    <div class="recipe-card rounded-[2.5rem] p-8 flex flex-col h-full cursor-pointer animate-fade-in shadow-sm" style="animation-delay: ${idx * 0.1}s" onclick="viewRecipe('${recipe.id}')">
-                        <div class="flex justify-between items-start mb-6">
-                            <span class="text-[10px] font-black tracking-[0.2em] text-orange-500 uppercase border-b-2 border-orange-200 pb-1 italic">Local Collection</span>
-                            <button onclick="event.stopPropagation(); deleteRecipe('${recipe.id}')" class="text-slate-200 hover:text-red-500 transition-colors p-1">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </div>
-                        <h3 class="text-2xl font-black text-slate-900 mb-4 leading-tight font-display line-clamp-2 uppercase tracking-tight">${recipe.title}</h3>
-                        <div class="text-slate-500 text-sm line-clamp-3 mb-8 leading-relaxed flex-grow">
-                            ${recipe.content ? recipe.content.replace(/<[^>]*>/g, '').substring(0, 150) : ''}...
-                        </div>
-                        <div class="flex items-center text-slate-900 font-black text-[10px] tracking-[0.2em] uppercase group">
-                            <span>Read Recipe</span>
-                            <div class="ml-3 w-6 h-[2px] bg-slate-200 group-hover:w-10 group-hover:bg-orange-500 transition-all"></div>
-                        </div>
-                    </div>
-                `).join('');
+        <div class="recipe-card rounded-[2.5rem] p-8 flex flex-col h-full cursor-pointer animate-fade-in shadow-sm" style="animation-delay: ${idx * 0.1}s" onclick="viewRecipe('${recipe.id}')">
+          <div class="flex justify-between items-start mb-6">
+            <span class="text-[10px] font-black tracking-[0.2em] text-orange-500 uppercase border-b-2 border-orange-200 pb-1 italic">Cloud Collection</span>
+            <button onclick="event.stopPropagation(); deleteRecipe('${recipe.id}')" class="text-slate-200 hover:text-red-500 transition-colors p-1">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+          <h3 class="text-2xl font-black text-slate-900 mb-4 leading-tight font-display line-clamp-2 uppercase tracking-tight">${recipe.title}</h3>
+          <div class="text-slate-500 text-sm line-clamp-3 mb-8 leading-relaxed flex-grow">
+            ${recipe.content ? recipe.content.replace(/<[^>]*>/g, '').substring(0, 150) : ''}...
+          </div>
+          <div class="flex items-center text-slate-900 font-black text-[10px] tracking-[0.2em] uppercase group">
+            <span>Read Recipe</span>
+            <div class="ml-3 w-6 h-[2px] bg-slate-200 group-hover:w-10 group-hover:bg-orange-500 transition-all"></div>
+          </div>
+        </div>
+      `).join('');
             }
             renderPagination();
         };
@@ -137,10 +178,10 @@
             let html = `<div class="flex items-center space-x-3 bg-white p-2 rounded-[1.5rem] shadow-sm border border-slate-100">`;
             for (let i = 1; i <= totalPages; i++) {
                 html += `
-                    <button onclick="changePage(${i})" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold transition-all ${currentPage === i ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-900'}">
-                        ${i}
-                    </button>
-                `;
+        <button onclick="changePage(${i})" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold transition-all ${currentPage === i ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-900'}">
+          ${i}
+        </button>
+      `;
             }
             html += `</div>`;
             container.innerHTML = html;
@@ -148,32 +189,45 @@
 
         window.changePage = (p) => { currentPage = p; renderUI(); window.scrollTo({top: 0, behavior:'smooth'}); };
 
-        // CRUD 기능
-        window.addRecipe = (event) => {
+        // 레시피 추가
+        window.addRecipe = async (event) => {
             event.preventDefault();
+            if (!currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+
             const title = document.getElementById('recipe-title').value;
             const content = document.getElementById('recipe-content').value;
 
-            const newRecipe = {
-                id: Date.now().toString(),
-                title: title,
-                content: content,
-                createdAt: new Date().toISOString()
-            };
-
-            allRecipes.unshift(newRecipe);
-            saveToLocal();
-            closeModal('add-modal');
-            document.getElementById('add-recipe-form').reset();
-        };
-
-        window.deleteRecipe = (id) => {
-            if (confirm('이 레시피를 영구적으로 삭제하시겠습니까? (로컬 저장소에서 삭제됩니다)')) {
-                allRecipes = allRecipes.filter(r => r.id !== id);
-                saveToLocal();
+            try {
+                await addDoc(collection(db, "recipes"), {
+                    userId: currentUser.uid,
+                    title: title,
+                    content: content,
+                    createdAt: serverTimestamp()
+                });
+                closeModal('add-modal');
+                document.getElementById('add-recipe-form').reset();
+            } catch (error) {
+                console.error('레시피 추가 오류:', error);
+                alert('레시피 추가에 실패했습니다.');
             }
         };
 
+        // 레시피 삭제
+        window.deleteRecipe = async (id) => {
+            if (confirm('이 레시피를 영구적으로 삭제하시겠습니까?')) {
+                try {
+                    await deleteDoc(doc(db, "recipes", id));
+                } catch (error) {
+                    console.error('삭제 오류:', error);
+                    alert('삭제에 실패했습니다.');
+                }
+            }
+        };
+
+        // 레시피 보기
         window.viewRecipe = (id) => {
             const r = allRecipes.find(x => x.id === id);
             if (r) {
@@ -197,7 +251,7 @@
             document.body.style.overflow = 'auto';
         };
 
-        // 데이터 백업 기능
+        // 데이터 백업 (Firebase 데이터 백업)
         window.exportData = () => {
             const dataStr = JSON.stringify(allRecipes, null, 2);
             const blob = new Blob([dataStr], {type: "application/json"});
