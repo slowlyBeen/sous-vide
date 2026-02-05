@@ -194,7 +194,6 @@
 
             const q = query(
                 collection(db, "recipes"),
-                where("userId", "==", currentUser.uid),
                 orderBy("createdAt", "desc")
             );
 
