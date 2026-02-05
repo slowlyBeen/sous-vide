@@ -62,7 +62,13 @@
         /* Recipe Content Rendering */
         .recipe-view-area {
             line-height: 1.8;
-            color: #475569;
+            /* color 제거 - Tailwind가 처리하도록 */
+        }
+
+        /* 검은 배경 카드는 무조건 흰색 텍스트 */
+        .recipe-view-area .bg-slate-900,
+        .recipe-view-area .bg-slate-900 * {
+            color: white !important;
         }
 
         .recipe-view-area h1 {
@@ -150,8 +156,7 @@
             onSnapshot,
             orderBy,
             query,
-            serverTimestamp,
-            where
+            serverTimestamp
         } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
         // Firebase 설정
