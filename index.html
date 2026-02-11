@@ -143,6 +143,11 @@
         .animate-fade-in {
             animation: fadeIn 0.5s ease-out forwards;
         }
+
+        .recipe-view-area .bg-slate-900 > div.flex {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
     </style>
 
     <!-- Firebase SDK -->
@@ -324,7 +329,10 @@
             const r = allRecipes.find(x => x.id === id);
             if (r) {
                 document.getElementById('view-title').innerText = r.title;
-                document.getElementById('view-content').innerHTML = r.content;
+                const contentArea = document.getElementById('view-content');
+                contentArea.innerHTML = r.content;
+                contentArea.scrollTop = 0;
+
                 openModal('view-modal');
             }
         };
@@ -468,7 +476,7 @@
                 </svg>
             </button>
         </div>
-        <div id="view-content" class="p-10 md:p-16 flex-1 overflow-y-auto recipe-view-area bg-white">
+        <div id="view-content" class="p-6 md:p-16 flex-1 overflow-y-auto recipe-view-area bg-white">
             <!-- Detail View -->
         </div>
         <div class="p-8 bg-slate-50 flex justify-center">
