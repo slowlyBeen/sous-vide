@@ -13,7 +13,7 @@
 **Sous-vide Master**는 수비드(Sous-vide) 조리법을 체계적으로 관리하고 기록하기 위한 웹 애플리케이션입니다.
 과학적 근거(온도, 시간, 살균 기준)를 바탕으로 작성된 레시피를 **카드 형태의 아름다운 UI**로 제공하며, PC와 모바일 어디서든 최적화된 환경에서 레시피를 열람할 수 있습니다.
 
-[👉 데모 페이지 바로가기](https://jbseojb.github.io/sous-vide/) *(Settings > Pages에서 배포 URL이 활성화되면 여기에 링크를 넣으세요)*
+[👉 데모 페이지 바로가기](https://slowlybeen.github.io/sous-vide/) *(Settings > Pages에서 배포 URL이 활성화되면 여기에 링크를 넣으세요)*
 
 <br>
 
